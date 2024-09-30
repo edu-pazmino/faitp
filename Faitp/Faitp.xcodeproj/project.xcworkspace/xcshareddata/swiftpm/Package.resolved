@@ -1,0 +1,15 @@
+{
+  "originHash" : "c5f6e1404e6d2d92db3fd674f407141052c0abae3da01f93c8a1753308a1c272",
+  "pins" : [
+    {
+      "identity" : "fileprovider",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/amosavian/FileProvider.git",
+      "state" : {
+        "revision" : "5d31778376af168ac917e0b1e8d2c4ee64cb246c",
+        "version" : "0.26.0"
+      }
+    }
+  ],
+  "version" : 3
+}

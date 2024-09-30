@@ -1,0 +1,16 @@
+version: '3.9'
+
+services:
+  ftp:
+    image: delfer/alpine-ftp-server  # Imagen de Docker para Pure-FTPd
+    container_name: faitp-ftp # Nombre del contenedor
+    restart: always  # Reinicia el contenedor automáticamente si falla
+    ports:
+      - "21:21"  # Mapea el puerto 21 del host al puerto 21 del contenedor (FTP control)
+      - "20:20"  # Mapea el puerto 20 del host al puerto 20 del contenedor (FTP data)
+      - "21000-21010:21000-21010"  # Rango de puertos para conexiones pasivas
+    volumes:
+      - ./.data:/var/www  # Monta un volumen local para almacenar los datos del FTP
+    environment:
+      - USERS=dev|dev
+      - ADDRESS=127.0.0.1
