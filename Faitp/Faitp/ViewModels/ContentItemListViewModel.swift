@@ -11,9 +11,11 @@ class ContentItemListViewModel: ObservableObject {
     @Published var contentItems: [Item] = []
     
     func addItem(title: String) {
-        withAnimation {
-            let newItem = Item(name: title)
-            contentItems.append(newItem)
-        }
+        let newItem = Item(name: title)
+        contentItems.append(newItem)
+    }
+    
+    func deleteMany(offsets: IndexSet) {
+        contentItems.remove(atOffsets: offsets)
     }
 }
