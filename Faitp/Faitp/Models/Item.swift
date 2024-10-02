@@ -11,8 +11,12 @@ import SwiftData
 @Model
 final class Item {
     var name: String
+    var path: String
+    var url: URL
     
-    init(name: String) {
+    init(name: String, path: String, url: URL) {
         self.name = name
+        self.path = path
+        self.url = url
     }
 }

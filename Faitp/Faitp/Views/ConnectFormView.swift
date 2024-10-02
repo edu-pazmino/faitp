@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import FilesProvider
 
 struct ConnectFormView: View {
@@ -15,6 +16,7 @@ struct ConnectFormView: View {
     @State var credentails: FTPCredentials = FTPCredentials(host: "ftp://127.0.0.1", username: "dev", password: "dev")
     @State private var showAlert = false
     @State private var errorMessage: String = ""
+    @State private var isLoading: Bool = false
     
     
     var body: some View {
@@ -25,11 +27,19 @@ struct ConnectFormView: View {
                     TextField("Username", text: $credentails.username).textCase(.none)
                     SecureField("Password", text: $credentails.password).textCase(.none)
                     NavigationLink(destination: ListContentView()) {
-                        Button("Connect", action: {
+                        Button(action: {
                             Task {
                                 await connect()
                             }
-                        })
+                        }) {
+                            HStack {
+                                Text("Connect")
+                                if isLoading { // 4. Mostrar ProgressView si isLoading es true
+                                    Spacer()
+                                    ProgressView()
+                                }
+                            }
+                        }
                     }
                 }
                 //            NavigationLink(destination: ListContentView(viewModel: viewModel))
@@ -46,6 +56,7 @@ struct ConnectFormView: View {
     
     func connect() async -> Result<Void, Error> {
         await withCheckedContinuation { continuation in
+            isLoading = true
             let (host, username, password) = credentails.asCredentails()
             
             let credential = URLCredential(user: username, password: password, persistence: .forSession)
@@ -58,14 +69,28 @@ struct ConnectFormView: View {
                         continuation.resume(returning: .failure(err))
                         return
                     }
-                    modelContext.insert(Connection(name: "\(username)@\(String(describing: host.baseURL))", host: host, username: username, password: password))
-                    continuation.resume(returning: .success(()))
                     
-                    //                for content in contents {
-                    //                    DispatchQueue.main.async {
-                    //
-                    //                    }
-                    //                }
+                    let conn = Connection(
+                        name: "\(username)@\(String(describing: host.baseURL))",
+                        host: host,
+                        username: username,
+                        password: password
+                    )
+                    
+                    let newItems = contents.map { content in Item(name: content.name, path: content.path, url: content.url) }
+                    modelContext.insert(conn)
+                    newItems.forEach { item in
+                        modelContext.insert(item)
+                    }
+                    
+                    do {
+                        try modelContext.save()
+                        continuation.resume(returning: .success(()))
+                        isLoading = false
+                    } catch {
+                        
+                    }
+                    
                 }
             }
         }
@@ -76,4 +101,5 @@ struct ConnectFormView: View {
 #Preview {
     ConnectFormView()
         .modelContainer(for: Connection.self, inMemory: true)
+        .modelContainer(for: Item.self, inMemory: true)
 }
