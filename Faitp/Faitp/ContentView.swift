@@ -18,12 +18,15 @@ struct ContentView: View {
     var body: some View {
         NavigationView {
             VStack {
-                Text("Hello, World!")
-//                ForEach(items) { item in
-//                    VStack {
-//                        Text(item.name)
-//                    }
-//                }
+                List {
+                    ForEach(items) { item in
+                        VStack {
+                            NavigationLink(destination: ListContentView(connection: item)) {
+                                Text(item.name)
+                            }
+                        }
+                    }
+                }
             }
             .navigationTitle("Connections")
             .toolbar {

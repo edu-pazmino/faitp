@@ -6,21 +6,27 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ListContentView: View {
 //    @EnvironmentObject var viewModel: ContentItemListViewModel
+    var connection: Connection
+    
+    @Query var items: [Item]
     
     var body: some View {
-        VStack {
-            Text("Hello world!")
-//            ForEach(viewModel.contentItems) { item in
-//                NavigationLink {
-//                    Text("Item at \(item.name)")
-//                } label: {
-//                    Text(item.name)
-//                }
-//            }
-//            .onDelete(perform: deleteItems)
+        List {
+            ForEach(items) { item in
+                NavigationLink (destination: ListContentView(connection: connection)) {
+                    VStack(alignment: .leading) {
+                        Text(item.name)
+                            .font(.headline)
+                        Text(item.path)
+                            .font(.subheadline)
+                    }
+                }
+                
+            }
         }
 //#if os(macOS)
 //        .navigationSplitViewColumnWidth(min: 180, ideal: 200)
@@ -60,5 +66,14 @@ struct ListContentView: View {
 }
 
 #Preview {
-    ListContentView()
+    ListContentView(
+        connection: Connection(
+            name: "dev",
+            host: URL(string:"ftp://127.0.0.1")!,
+            username: "dev",
+            password: "dev"
+        )
+    )
+    .modelContainer(for: Connection.self, inMemory: true)
+    .modelContainer(for: Item.self, inMemory: true)
 }

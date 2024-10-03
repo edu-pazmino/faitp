@@ -11,6 +11,7 @@ import FilesProvider
 
 struct ConnectFormView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.presentationMode) var presentationMode
     
     //    @ObservedObject var viewModel: ContentItemListViewModel
     @State var credentails: FTPCredentials = FTPCredentials(host: "ftp://127.0.0.1", username: "dev", password: "dev")
@@ -26,18 +27,18 @@ struct ConnectFormView: View {
                     TextField("Host", text: $credentails.host).textCase(.none)
                     TextField("Username", text: $credentails.username).textCase(.none)
                     SecureField("Password", text: $credentails.password).textCase(.none)
-                    NavigationLink(destination: ListContentView()) {
-                        Button(action: {
-                            Task {
-                                await connect()
+                    Button(action: {
+                        Task {
+                            if (await connect()) {
+                                presentationMode.wrappedValue.dismiss()
                             }
-                        }) {
-                            HStack {
-                                Text("Connect")
-                                if isLoading { // 4. Mostrar ProgressView si isLoading es true
-                                    Spacer()
-                                    ProgressView()
-                                }
+                        }
+                    }) {
+                        HStack {
+                            Text("Connect")
+                            if isLoading { // 4. Mostrar ProgressView si isLoading es true
+                                Spacer()
+                                ProgressView()
                             }
                         }
                     }
@@ -54,7 +55,7 @@ struct ConnectFormView: View {
         }
     }
     
-    func connect() async -> Result<Void, Error> {
+    func connect() async -> Bool {
         await withCheckedContinuation { continuation in
             isLoading = true
             let (host, username, password) = credentails.asCredentails()
@@ -66,7 +67,7 @@ struct ConnectFormView: View {
                     if let err = err {
                         errorMessage = err.localizedDescription
                         showAlert = true
-                        continuation.resume(returning: .failure(err))
+                        continuation.resume(returning: false)
                         return
                     }
                     
@@ -78,6 +79,7 @@ struct ConnectFormView: View {
                     )
                     
                     let newItems = contents.map { content in Item(name: content.name, path: content.path, url: content.url) }
+                    // add into model
                     modelContext.insert(conn)
                     newItems.forEach { item in
                         modelContext.insert(item)
@@ -85,10 +87,12 @@ struct ConnectFormView: View {
                     
                     do {
                         try modelContext.save()
-                        continuation.resume(returning: .success(()))
                         isLoading = false
-                    } catch {
-                        
+                        continuation.resume(returning: true)
+                    } catch let err {
+                        errorMessage = err.localizedDescription
+                        showAlert = true
+                        continuation.resume(returning: false)
                     }
                     
                 }
