@@ -19,3 +19,10 @@ class ContentItemListViewModel: ObservableObject {
         contentItems.remove(atOffsets: offsets)
     }
 }
+
+
+class SearchViewModel: ObservableObject {
+    @Published var searchText: String = ""
+    
+    
+}
