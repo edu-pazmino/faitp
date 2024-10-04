@@ -9,10 +9,41 @@ import SwiftUI
 import SwiftData
 
 struct ListContentView: View {
-//    @EnvironmentObject var viewModel: ContentItemListViewModel
     var connection: Connection
+    var path: String?
+    @State private var searchText: String = "" // Variable para el texto de búsqueda
+    @Query() private var items: [Item]
     
-    @Query var items: [Item]
+    var body: some View {
+        VStack {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.gray)
+                    .padding(.trailing, 8)
+                TextField("Search...", text: $searchText)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            }.padding()
+            
+            DynamicListItemView(
+                connection: connection,
+                searchText: searchText
+            )
+        }
+        .navigationTitle(path ?? "")
+    }
+}
+
+struct DynamicListItemView: View {
+    private var connection: Connection
+    @Query() private var items: [Item]
+    
+    init(connection:Connection, searchText: String) {
+        self.connection = connection
+        
+        _items = Query(filter: #Predicate<Item> {
+            searchText.isEmpty || $0.name.localizedStandardContains(searchText)
+        })
+    }
     
     var body: some View {
         List {
@@ -27,42 +58,8 @@ struct ListContentView: View {
                 }
                 
             }
-        }
-//#if os(macOS)
-//        .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-//#endif
-//        .toolbar {
-//#if os(iOS)
-//            ToolbarItem(placement: .navigationBarTrailing) {
-//                EditButton()
-//            }
-//#endif
-//            ToolbarItem {
-//                Button(action: addItem) {
-//                    Label("Add Item", systemImage: "plus")
-//                }
-//            }
-//        }
+        }.listStyle(PlainListStyle())
     }
-    
-//    private func addItem(title: String) {
-//        withAnimation {
-//            viewModel.addItem(title: title)
-//        }
-//        
-//    }
-//    
-//    private func addItem() {
-//        withAnimation {
-//            viewModel.addItem(title: "Test")
-//        }
-//    }
-//    
-//    private func deleteItems(offsets: IndexSet) {
-//        withAnimation {
-//            viewModel.deleteMany(offsets: offsets)
-//        }
-//    }
 }
 
 #Preview {
@@ -74,6 +71,5 @@ struct ListContentView: View {
             password: "dev"
         )
     )
-    .modelContainer(for: Connection.self, inMemory: true)
-    .modelContainer(for: Item.self, inMemory: true)
+    .modelContainer(Item.preview)
 }
