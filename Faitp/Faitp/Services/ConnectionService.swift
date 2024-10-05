@@ -9,7 +9,12 @@ import SwiftUICore
 import FilesProvider
 
 class ConnectionService: ObservableObject {
-    @Environment(\.modelContext) var model: ModelContext
+    private var model: ModelContext
+    
+    init(model: ModelContext) {
+        self.model = model
+    }
+    
     
     func connect(credentials: FTPCredentials) async throws -> Void {
         return try await withCheckedThrowingContinuation { continuation in
@@ -36,23 +41,31 @@ class ConnectionService: ObservableObject {
     
     
     func readFilesFrom(path: String, conn: Connection) async throws -> Void {
-        return await withCheckedContinuation { continuation in
+        return try await withCheckedThrowingContinuation { continuation in
             let credentials = conn.toFTPCredentials()
             
             if let ftp = credentials.toFTPFileProvider() {
                 ftp.contentsOfDirectory(path: path) { contents, err in
                     if let err = err {
-                        continuation.resume(throwing: err as! Never)
+                        continuation.resume(throwing: err)
                     }
                     
                     do {
                         //TODO: I need double check has connection exist into DB
+                        let itemsToDelete = try self.model.fetch(FetchDescriptor<Item>(predicate: #Predicate<Item> {
+                            $0.parentPath == path
+                        }))
+                        
+                        // Elimina cada uno de los items de forma segura
+                        for item in itemsToDelete {
+                            self.model.delete(item)
+                        }
                         self.readAllItems(path: path, contents: contents, conn: conn)
                         try self.model.save()
                         
                         continuation.resume()
                     } catch let err {
-                        continuation.resume(throwing: err as! Never)
+                        continuation.resume(throwing: err)
                     }
                 }
             }

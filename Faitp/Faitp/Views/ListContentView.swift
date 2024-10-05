@@ -10,30 +10,43 @@ import SwiftData
 
 struct ListContentView: View {
     var connection: Connection
-    var path: String?
+    var path: String
     
     @ObservedObject private var model = SearchViewModel()
     @Query() private var items: [Item]
     @EnvironmentObject private var connectionService: ConnectionService
+    @State private var isLoading = false
+    @State private var errorMessage = ""
     
     var body: some View {
         NavigationStack {
-//            InputSearchView(viewModel: model)
-            DynamicListItemView(
-                connection: connection,
-                searchText: model.searchText
-            )
-        }.onAppear() {
-            Task {
-                do {
-                    try await connectionService.readFilesFrom(path: path ?? "/", conn: connection)
-                } catch let err {
-                    print(err)
-                }
+            if (isLoading) {
+                ProgressView()
+            } else {
+                DynamicListItemView(
+                    connection: connection,
+                    searchText: model.searchText,
+                    path: path
+                )
             }
         }
         .searchable(text: $model.searchText, placement: .navigationBarDrawer)
-        .navigationTitle(path ?? "")
+        .navigationTitle(path)
+        .onAppear() {
+            guard !isLoading else { return }
+            Task {
+                do {
+                    isLoading = true
+                    try await connectionService.readFilesFrom(path: path, conn: connection)
+                    isLoading = false
+                } catch let err {
+                    isLoading = false
+                    errorMessage = err.localizedDescription
+                    print(err)
+                    
+                }
+            }
+        }
     }
 }
 
@@ -54,6 +67,7 @@ struct InputSearchView: View {
 
 struct DynamicListItemView: View {
     private var connection: Connection
+    var path: String
     @Query() private var items: [Item]
     
     /// Inicializa una nueva instancia.
@@ -66,18 +80,24 @@ struct DynamicListItemView: View {
     /// - Parameters:
     ///   - connection: La conexión utilizada para interactuar con la base de datos.
     ///   - searchText: El texto utilizado para filtrar los elementos.
-    init(connection:Connection, searchText: String) {
+    init(connection:Connection, searchText: String, path: String) {
         self.connection = connection
+        self.path = path
         
-        _items = Query(filter: #Predicate<Item> {
-            (searchText.isEmpty || $0.name.localizedStandardContains(searchText))
-        })
+        let filterPredicate = #Predicate<Item> {
+            (searchText.isEmpty || $0.name.localizedStandardContains(searchText)) && $0.parentPath == path
+        }
+        
+        _items = Query(filter: filterPredicate)
     }
     
     var body: some View {
         List {
             ForEach(items) { item in
-                NavigationLink (destination: ListContentView(connection: connection)) {
+                NavigationLink (destination: ListContentView(
+                    connection: connection,
+                    path: item.path)
+                ) {
                     ItemView(item: item)
                 }
                 
@@ -106,7 +126,8 @@ struct ItemView: View {
             host: URL(string:"ftp://127.0.0.1")!,
             username: "dev",
             password: "dev"
-        )
+        ),
+        path: "/"
     )
     .modelContainer(Item.preview)
 }

@@ -23,6 +23,11 @@ struct FaitpApp: App {
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
+    var connectionService: ConnectionService
+    
+    init() {
+        connectionService = ConnectionService(model: sharedModelContainer.mainContext)
+    }
     
 
     var body: some Scene {
@@ -30,6 +35,6 @@ struct FaitpApp: App {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
-        .environmentObject(ConnectionService())
+        .environmentObject(connectionService)
     }
 }

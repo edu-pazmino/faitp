@@ -65,8 +65,24 @@ struct ConnectFormView: View {
 
 
 #Preview {
+    let mockContainer: ModelContainer = {
+        let schema = Schema([
+            Connection.self,
+            Item.self
+        ])
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        
+        do {
+            return try ModelContainer(for: schema, configurations: [configuration])
+        } catch {
+            fatalError("Error creating mock container: \(error)")
+        }
+    }()
+    
+    let mockService = ConnectionService(model: mockContainer.mainContext)
+    
     ConnectFormView()
         .modelContainer(for: Connection.self, inMemory: true)
         .modelContainer(for: Item.self, inMemory: true)
-        .environmentObject(ConnectionService())
+        .environmentObject(mockService)
 }

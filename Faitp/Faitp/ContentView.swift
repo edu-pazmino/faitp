@@ -21,7 +21,7 @@ struct ContentView: View {
                 List {
                     ForEach(items) { item in
                         VStack {
-                            NavigationLink(destination: ListContentView(connection: item)) {
+                            NavigationLink(destination: ListContentView(connection: item, path: "/")) {
                                 Text(item.name)
                             }
                         }
