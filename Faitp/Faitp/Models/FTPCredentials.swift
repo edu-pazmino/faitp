@@ -6,6 +6,7 @@
 //
 import Foundation
 import SwiftData
+import FilesProvider
 
 @Model
 final class FTPCredentials {
@@ -25,6 +26,14 @@ final class FTPCredentials {
             username.lowercased(),
             password.lowercased()
         )
+    }
+    
+    func toFTPFileProvider() -> FTPFileProvider? {
+        let (host, username, password) = asCredentails()
+        
+        let credential = URLCredential(user: username, password: password, persistence: .forSession)
+        
+        return FTPFileProvider(baseURL: host, credential: credential)
     }
 }
 

@@ -10,14 +10,17 @@ import SwiftData
 import FilesProvider
 
 struct ConnectFormView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.modelContext) private var modelContext: ModelContext
+    @Environment(\.presentationMode) private var presentationMode: Binding<PresentationMode>
+    
+    @EnvironmentObject private var connectionService: ConnectionService
     
     //    @ObservedObject var viewModel: ContentItemListViewModel
     @State var credentails: FTPCredentials = FTPCredentials(host: "ftp://127.0.0.1", username: "dev", password: "dev")
     @State private var showAlert = false
     @State private var errorMessage: String = ""
     @State private var isLoading: Bool = false
+    
     
     
     var body: some View {
@@ -29,8 +32,12 @@ struct ConnectFormView: View {
                     SecureField("Password", text: $credentails.password).textCase(.none)
                     Button(action: {
                         Task {
-                            if (await connect()) {
+                            do {
+                                try await connectionService.connect(credentials: credentails)
                                 presentationMode.wrappedValue.dismiss()
+                            } catch let err {
+                                errorMessage = err.localizedDescription
+                                showAlert = true
                             }
                         }
                     }) {
@@ -54,51 +61,6 @@ struct ConnectFormView: View {
             }
         }
     }
-    
-    func connect() async -> Bool {
-        await withCheckedContinuation { continuation in
-            isLoading = true
-            let (host, username, password) = credentails.asCredentails()
-            
-            let credential = URLCredential(user: username, password: password, persistence: .forSession)
-            
-            if let ftp = FTPFileProvider(baseURL: host, mode: .passive, credential: credential) {
-                ftp.contentsOfDirectory(path: "/") { contents, err in
-                    if let err = err {
-                        errorMessage = err.localizedDescription
-                        showAlert = true
-                        continuation.resume(returning: false)
-                        return
-                    }
-                    
-                    let conn = Connection(
-                        name: "\(username)@\(String(describing: host.baseURL))",
-                        host: host,
-                        username: username,
-                        password: password
-                    )
-                    
-                    let newItems = contents.map { content in Item(name: content.name, path: content.path, url: content.url) }
-                    // add into model
-                    modelContext.insert(conn)
-                    newItems.forEach { item in
-                        modelContext.insert(item)
-                    }
-                    
-                    do {
-                        try modelContext.save()
-                        isLoading = false
-                        continuation.resume(returning: true)
-                    } catch let err {
-                        errorMessage = err.localizedDescription
-                        showAlert = true
-                        continuation.resume(returning: false)
-                    }
-                    
-                }
-            }
-        }
-    }
 }
 
 
@@ -106,4 +68,5 @@ struct ConnectFormView: View {
     ConnectFormView()
         .modelContainer(for: Connection.self, inMemory: true)
         .modelContainer(for: Item.self, inMemory: true)
+        .environmentObject(ConnectionService())
 }

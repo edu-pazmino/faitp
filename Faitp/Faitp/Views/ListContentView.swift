@@ -14,15 +14,25 @@ struct ListContentView: View {
     
     @ObservedObject private var model = SearchViewModel()
     @Query() private var items: [Item]
+    @EnvironmentObject private var connectionService: ConnectionService
     
     var body: some View {
-        VStack {
-            InputSearchView(viewModel: model)
+        NavigationStack {
+//            InputSearchView(viewModel: model)
             DynamicListItemView(
                 connection: connection,
                 searchText: model.searchText
             )
+        }.onAppear() {
+            Task {
+                do {
+                    try await connectionService.readFilesFrom(path: path ?? "/", conn: connection)
+                } catch let err {
+                    print(err)
+                }
+            }
         }
+        .searchable(text: $model.searchText, placement: .navigationBarDrawer)
         .navigationTitle(path ?? "")
     }
 }
@@ -60,7 +70,7 @@ struct DynamicListItemView: View {
         self.connection = connection
         
         _items = Query(filter: #Predicate<Item> {
-            searchText.isEmpty || $0.name.localizedStandardContains(searchText)
+            (searchText.isEmpty || $0.name.localizedStandardContains(searchText))
         })
     }
     
