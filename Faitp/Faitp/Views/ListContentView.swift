@@ -19,7 +19,7 @@ struct ListContentView: View {
     @State private var errorMessage = ""
     
     var body: some View {
-        NavigationStack {
+        VStack {
             if (isLoading) {
                 ProgressView()
             } else {

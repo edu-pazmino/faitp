@@ -16,7 +16,7 @@ struct ContentView: View {
     @Query private var items: [Connection]
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack {
                 List {
                     ForEach(items) { item in
