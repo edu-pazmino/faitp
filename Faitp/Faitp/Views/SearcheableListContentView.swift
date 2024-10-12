@@ -8,25 +8,35 @@
 import SwiftUI
 import SwiftData
 
-struct ListContentView: View {
+struct SearcheableListContentView: View {
     var connection: Connection
     var path: String
     
+    @EnvironmentObject private var connectionService: ConnectionService
+    @Environment(\.presentationMode) private var presentationMode: Binding<PresentationMode>
+    
     @ObservedObject private var model = SearchViewModel()
     @Query() private var items: [Item]
-    @EnvironmentObject private var connectionService: ConnectionService
+    
     @State private var isLoading = false
     @State private var errorMessage = ""
+    @State private var showError = false
+    @State private var showHiddenFiles: Bool = false
+    
     
     var body: some View {
         VStack {
+            Toggle("Mostrar archivos ocultos", isOn: $showHiddenFiles)
+                .padding()
+            
             if (isLoading) {
                 ProgressView()
             } else {
                 DynamicListItemView(
                     connection: connection,
                     searchText: model.searchText,
-                    path: path
+                    path: path,
+                    showHiddenElements: showHiddenFiles
                 )
             }
         }
@@ -42,11 +52,19 @@ struct ListContentView: View {
                 } catch let err {
                     isLoading = false
                     errorMessage = err.localizedDescription
+                    showError = true
                     print(err)
                     
                 }
             }
-        }
+        }.alert("Error", isPresented: $showError, actions: {
+            Button("OK", role: .cancel) {
+                showError = false
+                presentationMode.wrappedValue.dismiss()
+            }
+        }, message: {
+            Text(errorMessage)
+        })
     }
 }
 
@@ -80,54 +98,18 @@ struct DynamicListItemView: View {
     /// - Parameters:
     ///   - connection: La conexión utilizada para interactuar con la base de datos.
     ///   - searchText: El texto utilizado para filtrar los elementos.
-    init(connection:Connection, searchText: String, path: String) {
+    init(connection:Connection, searchText: String, path: String, showHiddenElements: Bool) {
         self.connection = connection
         self.path = path
         
         let filterPredicate = #Predicate<Item> {
-            (searchText.isEmpty || $0.name.localizedStandardContains(searchText)) && $0.parentPath == path
+            ((searchText.isEmpty || $0.name.localizedStandardContains(searchText)) && $0.parentPath == path) && (showHiddenElements || !$0.hidden)
         }
         
         _items = Query(filter: filterPredicate)
     }
     
     var body: some View {
-        List {
-            ForEach(items) { item in
-                NavigationLink (destination: ListContentView(
-                    connection: connection,
-                    path: item.path)
-                ) {
-                    ItemView(item: item)
-                }
-                
-            }
-        }.listStyle(PlainListStyle())
+        ListItemView(connection: connection, path: path, items: items)
     }
-}
-
-struct ItemView: View {
-    var item: Item
-    
-    var body: some View {
-        VStack(alignment: .leading) {
-            Text(item.name)
-                .font(.headline)
-            Text(item.path)
-                .font(.subheadline)
-        }
-    }
-}
-
-#Preview {
-    ListContentView(
-        connection: Connection(
-            name: "dev",
-            host: URL(string:"ftp://127.0.0.1")!,
-            username: "dev",
-            password: "dev"
-        ),
-        path: "/"
-    )
-    .modelContainer(Item.preview)
 }

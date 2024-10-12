@@ -48,6 +48,7 @@ class ConnectionService: ObservableObject {
                 ftp.contentsOfDirectory(path: path) { contents, err in
                     if let err = err {
                         continuation.resume(throwing: err)
+                        return
                     }
                     
                     do {
@@ -76,13 +77,7 @@ class ConnectionService: ObservableObject {
     private func readAllItems(path: String, contents: [FileObject], conn: Connection) -> Void {
         contents.forEach { content in
             self.model.insert(
-                Item(
-                    parentPath: path,
-                    name: content.name,
-                    path: content.path,
-                    url: content.url,
-                    connection: conn
-                )
+                Item.from(parentPath: path, connection: conn, file: content)
             )
         }
     }

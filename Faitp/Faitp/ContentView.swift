@@ -21,7 +21,7 @@ struct ContentView: View {
                 List {
                     ForEach(items) { item in
                         VStack {
-                            NavigationLink(destination: ListContentView(connection: item, path: "/")) {
+                            NavigationLink(destination: SearcheableListContentView(connection: item, path: "/")) {
                                 Text(item.name)
                             }
                         }
