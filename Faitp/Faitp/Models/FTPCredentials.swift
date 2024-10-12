@@ -14,10 +14,18 @@ final class FTPCredentials {
     var username: String
     var password: String
     
+    
     init(host: String, username: String, password: String) {
         self.host = host
         self.username = username
         self.password = password
+    }
+    
+    func toFTPFileProvider() -> FTPFileProvider? {
+        let (host, username, password) = asCredentails()
+        let credential = URLCredential(user: username, password: password, persistence: .forSession)
+        
+        return FTPFileProvider(baseURL: host, credential: credential)
     }
     
     func asCredentails() -> (URL,String, String) {
@@ -26,14 +34,6 @@ final class FTPCredentials {
             username.lowercased(),
             password.lowercased()
         )
-    }
-    
-    func toFTPFileProvider() -> FTPFileProvider? {
-        let (host, username, password) = asCredentails()
-        
-        let credential = URLCredential(user: username, password: password, persistence: .forSession)
-        
-        return FTPFileProvider(baseURL: host, credential: credential)
     }
 }
 

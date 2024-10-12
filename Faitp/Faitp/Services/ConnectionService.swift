@@ -8,6 +8,12 @@ import SwiftData
 import SwiftUICore
 import FilesProvider
 
+enum DownloadError: Error {
+    case invalidConnection
+    case unexpectedResponse
+    case otherError(Error)
+}
+
 class ConnectionService: ObservableObject {
     private var model: ModelContext
     
@@ -69,6 +75,26 @@ class ConnectionService: ObservableObject {
                         continuation.resume(throwing: err)
                     }
                 }
+            }
+        }
+    }
+    
+    func downloadItem(path: String, conn: Connection) async throws -> Data {
+        return try await withCheckedThrowingContinuation { continuation in
+            let credentials = conn.toFTPCredentials()
+            
+            if let ftp = credentials.toFTPFileProvider() {
+                ftp.contents(path: path) { result, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                    } else if let result = result {
+                        continuation.resume(returning: result)
+                    } else {
+                        continuation.resume(throwing: DownloadError.unexpectedResponse)
+                    }
+                }
+            } else {
+                continuation.resume(throwing: DownloadError.invalidConnection)
             }
         }
     }

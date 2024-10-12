@@ -26,6 +26,10 @@ final class Item {
     var type: ItemType
     var readonly: Bool
     
+    var ftp: FTPFileProvider? {
+        return connection?.toFTPCredentials().toFTPFileProvider()
+    }
+    
     var connection: Connection?
     
     init(parentPath: String, name: String, path: String, url: URL, connection: Connection?, type: ItemType = .file, hidden: Bool = false, readonly: Bool = false) {
@@ -38,6 +42,24 @@ final class Item {
         self.hidden = hidden
         self.readonly = readonly
     }
+    
+    
+    func download(completion: @escaping (Result<Data, Error>) -> Void) {
+        guard let ftp = self.ftp else {
+            completion(.failure(NSError(domain: "FTPError", code: 1, userInfo: [NSLocalizedDescriptionKey: "No FTP connection available."])))
+            return
+        }
+        print("downloading \(path)")
+        
+        ftp.contents(path: path) { result, error  in
+            if let err = error {
+                completion(.failure(err))
+            } else if let data = result {
+                completion(.success(data))
+            }
+        }
+    }
+    
     
     static func from(parentPath: String, connection: Connection, file: FileObject) -> Item {
         let name = file.name
@@ -97,7 +119,7 @@ final class Item {
     static var previews: [Item] {
         // Crear una conexión de ejemplo
         let connection = Connection(name: "Example Connection", host: URL(string: "https://example.com")!, username: "user", password: "password")
-    
+        
         
         return [
             // Directorios del sistema asociados con la conexión

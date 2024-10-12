@@ -4,8 +4,19 @@
 //
 //  Created by Edu Pazmiño Peralta on 7/10/24.
 //
+import UIKit
 import SwiftUI
 import SwiftData
+
+struct ShareSheet: UIViewControllerRepresentable {
+    var items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
 
 struct ListItemView: View {
     var connection: Connection
@@ -24,7 +35,7 @@ struct ListItemView: View {
                         ItemView(item: item)
                     }
                 } else {
-                    ItemView(item: item)
+                    DownloableItemView(item: item, connection: connection)
                 }
                 
             }
@@ -32,8 +43,52 @@ struct ListItemView: View {
     }
 }
 
+struct DownloableItemView: View {
+    var item: Item
+    var connection: Connection
+    @EnvironmentObject private var connectionService: ConnectionService
+    
+    @State private var showShareSheet = false
+    @State private var fileURL: URL?
+    @State private var isDownloading: Bool = false
+    @State private var showAlert: Bool = false
+    @State private var alertMessage: String = ""
+    
+    var body: some View {
+        ItemView(item: item, loading: isDownloading).onTapGesture {
+            if item.type != .directory {
+                isDownloading = true
+                Task {
+                    do {
+                        let data = try await connectionService.downloadItem(path: item.path, conn: connection)
+                        
+                        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(item.name)
+                        
+                        try data.write(to: tempURL)
+                        fileURL = tempURL
+                        showShareSheet = true
+                        
+                    } catch {
+                        alertMessage = error.localizedDescription
+                        showAlert = true
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let fileURL = fileURL {
+                ShareSheet(items: [fileURL])
+            }
+        }.alert(isPresented: $showAlert) {
+            Alert(title: Text("Error"), message: Text(alertMessage))
+        }
+    }
+}
+
 struct ItemView: View {
     var item: Item
+    var loading: Bool?
+    
     
     var body: some View {
         HStack {
@@ -45,6 +100,12 @@ struct ItemView: View {
                     .font(.headline)
                 Text(item.path)
                     .font(.subheadline)
+            }
+            
+            if let isLoading = loading {
+                if isLoading {
+                    ProgressView() // Muestra un indicador de carga
+                }
             }
         }
     }
